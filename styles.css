@@ -1,0 +1,93 @@
+/* ============================================================
+   FARMACORP · INVENTARIO PRO — ESTILOS
+   Paleta oficial: #055199 (navy) · #157fc5 (brand) · #f38324 (orange) · #fdd20a (yellow)
+   ============================================================ */
+
+* { -webkit-tap-highlight-color: transparent; }
+html, body { background: #F3F7FC; font-family: 'Inter', sans-serif; }
+.font-display { font-family: 'Poppins', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #C9DEF2; border-radius: 99px; }
+
+/* ---------- Marca: sello de 4 cuadrantes con los colores oficiales ---------- */
+.petal-mark { position: relative; width: 1em; height: 1em; }
+.petal-mark span {
+  position: absolute; inset: 0; border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%;
+  opacity: 0.96;
+}
+.petal-mark .p1 { background: #055199; transform: rotate(0deg)   scale(0.62) translate(-18%, -18%); }
+.petal-mark .p2 { background: #157fc5; transform: rotate(90deg)  scale(0.62) translate(-18%, -18%); }
+.petal-mark .p3 { background: #f38324; transform: rotate(180deg) scale(0.62) translate(-18%, -18%); }
+.petal-mark .p4 { background: #fdd20a; transform: rotate(270deg) scale(0.62) translate(-18%, -18%); }
+
+/* ---------- Tarjeta base ---------- */
+.fc-card {
+  background: #FFFFFF;
+  border: 1px solid #E1EBF5;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(5, 81, 153, 0.06), 0 4px 16px -4px rgba(5, 81, 153, 0.10);
+}
+
+/* ---------- Punto de estado en vivo (realtime) ---------- */
+.pulse-dot { position: relative; }
+.pulse-dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 99px; background: #16A34A;
+  animation: pulse-ring 1.6s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+@keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.4); opacity: 0; } }
+
+/* ---------- Switch on/off ---------- */
+.fc-switch { width: 48px; height: 28px; border-radius: 99px; background: #DCE7F5; position: relative; transition: .2s; cursor: pointer; flex-shrink: 0; }
+.fc-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 99px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: .2s; }
+.fc-switch.on { background: #157fc5; }
+.fc-switch.on::after { transform: translateX(20px); }
+.fc-switch.warn.on { background: #f38324; }
+.fc-switch.danger.on { background: #E63946; }
+
+/* ---------- Navegación ---------- */
+.navitem { color: #93B4D8; transition: .15s; }
+.navitem.active { color: #157fc5; }
+.navitem.active .navlabel { color: #055199; font-weight: 600; }
+.navbtn-d { color: #93B4D8; }
+.navbtn-d:hover { background: #F3F7FC; }
+
+/* ---------- Píldoras de filtro ---------- */
+.pill { border: 1px solid #DCE7F5; color: #0B3F73; background: #fff; transition: .15s; }
+.pill.active { background: #157fc5; border-color: #157fc5; color: #fff; }
+
+/* ---------- Transiciones de pestaña ---------- */
+.tabpanel { animation: fadein .25s ease; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---------- Marco de escaneo ---------- */
+.scan-frame { border: 2px solid rgba(21, 127, 197, 0.55); }
+.scan-line { position: absolute; left: 8%; right: 8%; height: 2px; background: linear-gradient(90deg, transparent, #157fc5, transparent); animation: scanmove 2.2s ease-in-out infinite; }
+@keyframes scanmove { 0% { top: 12%; } 50% { top: 85%; } 100% { top: 12%; } }
+
+input[type=number]::-webkit-inner-spin-button { opacity: 1; }
+input:focus, textarea:focus, select:focus { outline: 2px solid #157fc5; outline-offset: 1px; }
+
+.badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+
+.skeleton { background: linear-gradient(90deg, #EAF1FB 25%, #F3F7FC 37%, #EAF1FB 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+@keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* ---------- Diferenciación visual clave: DAÑO REAL vs CRUZADO RECUPERABLE ---------- */
+/* Rojo = pérdida real (merma). Ámbar = recuperable (no es pérdida, es reubicable/reetiquetable). */
+.chip-danado   { background: #FDEEEF; color: #C81E2C; }
+.chip-cruzado  { background: #FFF4E5; color: #B65E0F; }
+.chip-vencido  { background: #FDEEEF; color: #C81E2C; }
+.chip-ok       { background: #EAFBF1; color: #0F7A3D; }
+
+/* ---------- Chips de Tipo de Incidencia ---------- */
+.tipo-chip[data-tipo="DANO"].active     { background: #E63946; border-color: #E63946; color: #fff; }
+.tipo-chip[data-tipo="CRUZADO"].active  { background: #f38324; border-color: #f38324; color: #fff; }
+.tipo-chip[data-tipo="VENCIDO"].active  { background: #B65E0F; border-color: #B65E0F; color: #fff; }
+.tipo-chip[data-tipo="FALTANTE"].active { background: #0B3F73; border-color: #0B3F73; color: #fff; }
+
+/* ---------- Login modal ---------- */
+.login-role-btn { transition: .15s; }
+.login-role-btn.active { background: rgba(21, 127, 197, 0.12); color: #0C5FA3; border-color: rgba(21, 127, 197, 0.35); }
+.login-role-btn.active.role-sup { background: rgba(243, 131, 36, 0.12); color: #B65E0F; border-color: rgba(243, 131, 36, 0.35); }

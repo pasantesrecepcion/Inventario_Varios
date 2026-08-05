@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Farmacorp · Inventario PRO</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy:  { DEFAULT:'#055199', 50:'#EAF1FB', 100:'#CFE0F5', 300:'#7AA6DD', 500:'#0B3F73', 700:'#073A6B', 900:'#03264A' },
+          brand: { DEFAULT:'#157fc5', 50:'#EAF3FE', 100:'#D2E6FD', 300:'#7FBBF7', 500:'#157fc5', 600:'#0F5FBF', 700:'#0C4A96' },
+          orange:{ DEFAULT:'#f38324', 50:'#FFF4E5', 500:'#f38324', 700:'#B65E0F' },
+          yellow:{ DEFAULT:'#fdd20a', 50:'#FFFAE0' },
+          ok:    { DEFAULT:'#16A34A', 50:'#EAFBF1', 500:'#16A34A' },
+          warn:  { DEFAULT:'#f38324', 50:'#FFF4E5', 500:'#f38324' },
+          bad:   { DEFAULT:'#E63946', 50:'#FDEEEF', 500:'#E63946' },
+        },
+        fontFamily: {
+          display: ['Poppins','sans-serif'],
+          body: ['Inter','sans-serif'],
+          mono: ['JetBrains Mono','monospace'],
+        }
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="style.css">
+
+<!-- Icons / Scanner / Supabase / Charts -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="text-navy-900 min-h-screen pb-24 md:pb-0">
+
+<!-- ============================================================
+     MODAL DE LOGIN
+     ============================================================ -->
+<div id="loginModal" class="fixed inset-0 bg-navy-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="fc-card w-full max-w-md p-6 md:p-8 space-y-6">
+    <div class="text-center space-y-2">
+      <div class="petal-mark w-10 h-10 mx-auto"><span class="p1"></span><span class="p2"></span><span class="p3"></span><span class="p4"></span></div>
+      <h1 class="font-display font-800 text-navy-900 text-lg">Farmacorp · Inventario PRO</h1>
+      <p class="text-xs text-navy-400">Selecciona tu perfil para ingresar</p>
+    </div>
+
+    <div class="flex bg-navy-50 p-1 rounded-xl border border-navy-100 text-xs font-semibold">
+      <button id="btnRoleOp" onclick="switchLoginRole('operador')" class="login-role-btn flex-1 py-2 rounded-lg border border-transparent active">Operador</button>
+      <button id="btnRoleSup" onclick="switchLoginRole('supervisor')" class="login-role-btn role-sup flex-1 py-2 rounded-lg border border-transparent text-navy-400">Supervisor / Auditor</button>
+    </div>
+
+    <!-- Login operador: ingreso rápido, sin contraseña -->
+    <form id="formLoginOperador" onsubmit="handleLoginOperador(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-navy-500 mb-1 uppercase">Usuario / Operador</label>
+        <input id="opUsername" type="text" required placeholder="Ej. jchuarachi" autocomplete="off"
+          class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl px-4 py-2.5 text-sm focus:bg-white">
+      </div>
+      <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition text-xs uppercase tracking-wider">
+        Ingresar al Registro
+      </button>
+      <p id="opLoginError" class="hidden text-xs text-bad-500 font-semibold text-center">Usuario no encontrado o inactivo.</p>
+    </form>
+
+    <!-- Login supervisor: usuario + contraseña -->
+    <form id="formLoginSupervisor" onsubmit="handleLoginSupervisor(event)" class="space-y-4 hidden">
+      <div>
+        <label class="block text-xs font-semibold text-navy-500 mb-1 uppercase">Usuario Supervisor</label>
+        <input id="supUsername" type="text" required placeholder="admin" autocomplete="off"
+          class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl px-4 py-2.5 text-sm focus:bg-white">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-navy-500 mb-1 uppercase">Contraseña</label>
+        <input id="supPassword" type="password" required placeholder="••••••••"
+          class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl px-4 py-2.5 text-sm focus:bg-white">
+      </div>
+      <button type="submit" class="w-full py-3 bg-orange-500 hover:brightness-95 text-white font-bold rounded-xl transition text-xs uppercase tracking-wider">
+        Ingresar al Panel de Supervisión
+      </button>
+      <p id="supLoginError" class="hidden text-xs text-bad-500 font-semibold text-center">Usuario o contraseña incorrectos.</p>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#E1EBF5]">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <div class="petal-mark w-8 h-8"><span class="p1"></span><span class="p2"></span><span class="p3"></span><span class="p4"></span></div>
+      <div class="leading-tight">
+        <p class="font-display font-800 text-navy-900 text-lg tracking-tight -mb-0.5">Farmacorp</p>
+        <p class="text-[10px] uppercase tracking-widest text-brand-600 font-semibold">Inventario &amp; Auditoría PRO</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span id="roleBadge" class="badge px-2.5 py-1 rounded-md bg-brand-50 text-brand-700">OPERADOR</span>
+      <div class="hidden sm:flex items-center gap-2 bg-navy-50 border border-navy-100 rounded-full pl-1 pr-3 py-1">
+        <span class="w-6 h-6 rounded-full bg-brand-600 text-white text-[11px] font-bold flex items-center justify-center font-mono" id="activeUserAvatar">--</span>
+        <span class="text-xs font-semibold text-navy-700" id="activeUserLabel">--</span>
+      </div>
+      <button onclick="logout()" title="Cerrar sesión" class="p-2 rounded-xl bg-navy-50 hover:bg-bad-50 text-navy-400 hover:text-bad-500 transition border border-navy-100">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Desktop tabs (se generan según rol en script.js) -->
+  <nav id="navDesktop" class="hidden md:flex max-w-6xl mx-auto px-4 gap-1 pb-1"></nav>
+</header>
+
+<!-- Connection banner -->
+<div class="max-w-6xl mx-auto px-4 mt-3">
+  <div class="flex items-center justify-between fc-card !rounded-xl px-3.5 py-2 text-xs">
+    <div class="flex items-center gap-2">
+      <span class="relative w-2.5 h-2.5"><span class="pulse-dot absolute w-2.5 h-2.5"></span><span class="absolute w-2.5 h-2.5 rounded-full bg-ok-500"></span></span>
+      <span class="font-semibold text-navy-700" id="connLabel">Conectando a Supabase…</span>
+      <span class="hidden sm:inline text-navy-300">·</span>
+      <span class="hidden sm:inline text-navy-500 font-mono">proyecto: farmacorp-inventario</span>
+    </div>
+    <span class="text-navy-400 font-mono" id="clock">--:--:--</span>
+  </div>
+</div>
+
+<main class="max-w-6xl mx-auto px-4 pt-4">
+
+  <!-- ============ TAB: REGISTRO / ESCÁNER ============
+       Desktop: cámara (col. izquierda) + formulario (col. derecha), lado a lado.
+       Celular: una sola columna, cámara arriba y formulario completo debajo. ============ -->
+  <section id="tab-scan" class="tabpanel hidden">
+    <div class="grid lg:grid-cols-2 gap-4 items-start">
+
+      <!-- ---------- COLUMNA IZQUIERDA: identificación del producto ---------- -->
+      <div class="space-y-4">
+        <div class="fc-card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-display font-700 text-navy-900">Escáner de Código de Barras</h2>
+            <span class="badge px-2 py-1 rounded-md bg-navy-50 text-navy-500" id="scanStatusBadge">INACTIVO</span>
+          </div>
+
+          <div id="readerWrap" class="relative w-full aspect-[4/3] sm:aspect-video rounded-xl overflow-hidden bg-navy-900 hidden">
+            <div id="reader" class="w-full h-full"></div>
+            <div class="absolute inset-0 pointer-events-none">
+              <div class="absolute inset-8 scan-frame rounded-xl"></div>
+              <div class="scan-line"></div>
+            </div>
+          </div>
+
+          <div id="readerPlaceholder" class="w-full aspect-[4/3] sm:aspect-video rounded-xl bg-navy-50 border border-dashed border-navy-100 flex flex-col items-center justify-center text-navy-300 gap-2">
+            <i data-lucide="barcode" class="w-9 h-9"></i>
+            <p class="text-xs font-medium text-navy-400">La vista de cámara aparecerá aquí</p>
+          </div>
+
+          <button id="btnToggleScanner" class="mt-4 w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] transition text-white font-display font-700 text-sm flex items-center justify-center gap-2">
+            <i data-lucide="camera" class="w-5 h-5"></i>
+            Activar Cámara Escáner
+          </button>
+          <p class="text-[11px] text-navy-400 text-center mt-2">Solo códigos de barras: EAN-13, UPC-A, Code128, ITF.</p>
+        </div>
+
+        <!-- Búsqueda predictiva manual -->
+        <div class="fc-card p-4 relative">
+          <h2 class="font-display font-700 text-navy-900 mb-3 flex items-center gap-2"><i data-lucide="search" class="w-4 h-4 text-brand-600"></i>Búsqueda Manual</h2>
+          <div class="relative">
+            <input id="searchInput" type="text" placeholder="Nombre, código interno o código de barras…" autocomplete="off"
+              class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 pl-10 pr-4 text-sm font-medium placeholder:text-navy-300 focus:bg-white">
+            <i data-lucide="search" class="w-4 h-4 text-navy-300 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <div id="searchResults" class="hidden absolute z-30 top-full mt-1.5 left-0 right-0 bg-white border border-[#E1EBF5] rounded-xl shadow-lg max-h-72 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <!-- Producto no encontrado -> creación rápida -->
+        <div id="quickCreatePanel" class="hidden fc-card p-4 space-y-3 border-orange-500/30">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-700 text-sm text-navy-900 flex items-center gap-2"><i data-lucide="package-plus" class="w-4 h-4 text-orange-500"></i>Producto No Encontrado</h3>
+            <button onclick="cerrarCreacionRapida()" class="text-navy-300 hover:text-bad-500"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          <p class="text-[11px] text-navy-400">Ese código no existe todavía en el maestro. Créalo ahora y quedará disponible para la próxima vez.</p>
+          <div>
+            <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Código Escaneado / Buscado</label>
+            <input id="quickCreateCode" type="text" readonly class="w-full bg-navy-100 border border-[#DCE7F5] rounded-xl py-2.5 px-3.5 text-sm font-mono text-navy-500">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Descripción del Producto <span class="text-bad-500">*</span></label>
+            <input id="quickCreateDescripcion" type="text" placeholder="Ej. PARACETAMOL 500MG X 100 TAB" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-2.5 px-3.5 text-sm focus:bg-white">
+          </div>
+          <div id="quickCreateDuplicateWarning" class="hidden bg-orange-50 border border-orange-500/30 rounded-xl p-3 space-y-2"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Almacén</label>
+              <select id="quickCreateAlmacen" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-2.5 px-3.5 text-sm focus:bg-white">
+                <option>B100</option>
+                <option>A102</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Ubicación</label>
+              <input id="quickCreateUbicacion" type="text" placeholder="Ej. CU-CT-ME-15-00-00" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-2.5 px-3.5 text-sm focus:bg-white">
+            </div>
+          </div>
+          <button onclick="crearProductoRapido()" class="w-full py-3 rounded-xl bg-orange-500 hover:brightness-95 text-white font-display font-700 text-xs uppercase tracking-wide">
+            Crear y Usar Este Producto
+          </button>
+        </div>
+
+        <!-- Tarjeta del producto seleccionado (visible también en desktop bajo la cámara) -->
+        <div id="productCard" class="hidden fc-card p-4 flex gap-3 items-start">
+          <div class="petal-mark w-10 h-10 shrink-0 mt-0.5"><span class="p1"></span><span class="p2"></span><span class="p3"></span><span class="p4"></span></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <p class="font-display font-700 text-navy-900 leading-tight" id="pName">—</p>
+              <span id="pOrigin" class="badge px-2 py-1 rounded-md shrink-0"></span>
+            </div>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-navy-500">
+              <span>Código: <span class="font-mono font-semibold text-navy-700" id="pCode">—</span></span>
+              <span>Barras: <span class="font-mono font-semibold text-navy-700" id="pBarcode">—</span></span>
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="text-[11px] text-navy-400">Stock teórico:</span>
+              <span class="text-xs font-bold text-navy-700 font-mono" id="pTheoretical">—</span>
+            </div>
+          </div>
+          <button onclick="clearSelection()" class="text-navy-300 hover:text-bad-500 shrink-0"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+
+      <!-- ---------- COLUMNA DERECHA: formulario de conteo (manual, completo) ---------- -->
+      <div id="productForm" class="space-y-4">
+
+        <!-- Sin producto seleccionado -->
+        <div id="noProductNotice" class="fc-card p-6 flex flex-col items-center justify-center text-center gap-2 text-navy-300">
+          <i data-lucide="package-search" class="w-8 h-8"></i>
+          <p class="text-xs font-semibold text-navy-400">Escanea o busca un producto para habilitar el formulario</p>
+        </div>
+
+        <div id="formBody" class="hidden space-y-4">
+          <!-- Foto de evidencia (independiente del escáner: documenta el estado físico) -->
+          <div class="fc-card p-4">
+            <h3 class="font-display font-700 text-sm text-navy-900 mb-3 flex items-center gap-2"><i data-lucide="image-plus" class="w-4 h-4 text-brand-600"></i>Foto de Evidencia</h3>
+            <input id="evidencePhotoInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleEvidencePhoto(event)">
+            <div id="evidenceEmpty" onclick="document.getElementById('evidencePhotoInput').click()"
+              class="cursor-pointer w-full h-36 rounded-xl bg-navy-50 border border-dashed border-navy-100 flex flex-col items-center justify-center text-navy-300 gap-1.5 hover:bg-navy-100/60 transition">
+              <i data-lucide="camera" class="w-7 h-7"></i>
+              <p class="text-xs font-medium text-navy-400">Tomar o adjuntar foto del producto / daño</p>
+            </div>
+            <div id="evidencePreviewWrap" class="hidden relative">
+              <img id="evidencePreview" class="w-full h-44 object-cover rounded-xl border border-[#E1EBF5]" alt="Evidencia">
+              <button onclick="removeEvidencePhoto()" class="absolute top-2 right-2 bg-navy-900/70 hover:bg-bad-500 text-white rounded-full p-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <p class="text-[10px] text-navy-400 mt-2">Opcional pero recomendada cuando hay daño, cruce o vencimiento.</p>
+          </div>
+
+          <!-- Tipo de incidencia (categorización, puede ser más de una) -->
+          <div class="fc-card p-4">
+            <h3 class="font-display font-700 text-sm text-navy-900 mb-3">Tipo de Incidencia</h3>
+            <div class="flex flex-wrap gap-2" id="tipoIncidenciaGroup">
+              <button type="button" data-tipo="DANO" class="tipo-chip pill px-3 py-1.5 rounded-full text-xs font-semibold">Daño físico</button>
+              <button type="button" data-tipo="CRUZADO" class="tipo-chip pill px-3 py-1.5 rounded-full text-xs font-semibold">Cruzado</button>
+              <button type="button" data-tipo="VENCIDO" class="tipo-chip pill px-3 py-1.5 rounded-full text-xs font-semibold">Vencido</button>
+              <button type="button" data-tipo="FALTANTE" class="tipo-chip pill px-3 py-1.5 rounded-full text-xs font-semibold">Faltante</button>
+            </div>
+            <p class="text-[10px] text-navy-400 mt-2">Selecciona todas las que apliquen a este conteo.</p>
+          </div>
+
+          <!-- Cantidades -->
+          <div class="fc-card p-4 space-y-4">
+            <div>
+              <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Cantidad Total Contada <span class="text-bad-500">*</span></label>
+              <input id="qtyTotal" type="number" min="0" inputmode="numeric" placeholder="0" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-lg font-bold font-mono text-navy-900 focus:bg-white">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-semibold text-navy-600 mb-1.5 block flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-bad-500"></span> Dañado (merma real)
+                </label>
+                <input id="qtyDamage" type="number" min="0" inputmode="numeric" placeholder="0" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-lg font-bold font-mono text-bad-500 focus:bg-white">
+                <p class="text-[10px] text-navy-400 mt-1">Roto, manchado, mojado: pérdida definitiva.</p>
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-navy-600 mb-1.5 block flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-orange-500"></span> Cruzado (recuperable)
+                </label>
+                <input id="qtyCrossed" type="number" min="0" inputmode="numeric" placeholder="0" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-lg font-bold font-mono text-orange-700 focus:bg-white">
+                <p class="text-[10px] text-navy-400 mt-1">SKU/variante incorrecta, pero sano: se reetiqueta.</p>
+              </div>
+            </div>
+
+            <div id="qtyGoodPreview" class="flex items-center justify-between text-xs bg-ok-50 border border-ok-500/20 rounded-xl px-3.5 py-2.5">
+              <span class="text-navy-600 font-semibold">En buen estado (calculado)</span>
+              <span class="font-mono font-bold text-ok-500" id="qtyGoodValue">0</span>
+            </div>
+            <p id="damageError" class="hidden text-xs text-bad-500 font-semibold -mt-2 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>Dañado + Cruzado no puede superar el total contado.</p>
+          </div>
+
+          <!-- Descripción del daño -->
+          <div class="fc-card p-4">
+            <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Descripción del Daño / Detalle</label>
+            <textarea id="damageDescription" rows="2" placeholder="Ej. empaque roto, manchado, mojado, olor extraño…" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-sm placeholder:text-navy-300 focus:bg-white resize-none"></textarea>
+          </div>
+
+          <!-- Lote / vencimiento (aparece si se marcó el tipo "Vencido") -->
+          <div id="expiryWrap" class="hidden fc-card p-4 space-y-3">
+            <h3 class="font-display font-700 text-sm text-navy-900">Lote y Vencimiento</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Número de Lote</label>
+                <input id="lotNumber" type="text" placeholder="Ej. L-24081" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-sm font-mono focus:bg-white">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Fecha de Vencimiento</label>
+                <input id="expiryDate" type="date" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-sm font-semibold text-navy-900 focus:bg-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- Ubicación + observaciones generales -->
+          <div class="fc-card p-4 space-y-4">
+            <div>
+              <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Ubicación Exacta (pasillo / rack)</label>
+              <input id="location" type="text" placeholder="Ej. Rack B-14, Nivel 3" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-sm focus:bg-white">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-navy-600 mb-1.5 block">Observaciones Generales</label>
+              <textarea id="comment" rows="2" placeholder="Cualquier otro detalle relevante del conteo…" class="w-full bg-navy-50 border border-[#DCE7F5] rounded-xl py-3 px-3.5 text-sm placeholder:text-navy-300 focus:bg-white resize-none"></textarea>
+            </div>
+          </div>
+
+          <button id="btnRegister" onclick="registerCount()" class="w-full py-4 rounded-xl bg-ok-500 hover:brightness-105 active:scale-[0.99] transition text-white font-display font-700 text-sm flex items-center justify-center gap-2">
+            <i data-lucide="check-circle-2" class="w-5 h-5"></i> Registrar Conteo
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: MIS REGISTROS (operador) ============ -->
+  <section id="tab-mine" class="tabpanel hidden space-y-3">
+    <h2 class="font-display font-700 text-navy-900">Mis Registros de Hoy</h2>
+    <div class="fc-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-navy-50 text-navy-400 uppercase font-mono border-b border-[#E1EBF5]">
+            <tr>
+              <th class="p-2.5">Hora</th><th class="p-2.5">Código</th><th class="p-2.5">Producto</th>
+              <th class="p-2.5">Contado</th><th class="p-2.5">Dañado</th><th class="p-2.5">Cruzado</th><th class="p-2.5">Observación</th>
+            </tr>
+          </thead>
+          <tbody id="myRecordsBody" class="divide-y divide-[#EEF3FA] font-mono"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: MONITOREO EN VIVO (supervisor) ============ -->
+  <section id="tab-live" class="tabpanel hidden space-y-4">
+    <div class="fc-card p-4">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="font-display font-700 text-navy-900 flex items-center gap-2">
+          <span class="relative w-2 h-2"><span class="pulse-dot absolute w-2 h-2"></span><span class="absolute w-2 h-2 rounded-full bg-ok-500"></span></span>
+          Feed en Tiempo Real
+        </h2>
+        <span class="text-xs font-mono text-navy-400"><span id="liveCount">0</span> registros</span>
+      </div>
+      <p class="text-xs text-navy-400 mb-3">Los conteos aparecen automáticamente al registrarse en cualquier terminal (Supabase Realtime).</p>
+      <div id="liveEmpty" class="py-14 flex flex-col items-center gap-2 text-navy-300">
+        <i data-lucide="inbox" class="w-9 h-9"></i>
+        <p class="text-xs font-medium">Aún no hay registros.</p>
+      </div>
+      <div id="liveList" class="hidden divide-y divide-[#EEF3FA]"></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: CENTRO DE CONTROL (supervisor) ============ -->
+  <section id="tab-control" class="tabpanel hidden space-y-4">
+    <div class="fc-card p-3 flex gap-2 overflow-x-auto">
+      <button class="filter-pill pill active px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap" data-filter="all">Todos</button>
+      <button class="filter-pill pill px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap" data-filter="danado">Dañados (merma real)</button>
+      <button class="filter-pill pill px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap" data-filter="cruzado">Cruzados (recuperable)</button>
+      <button class="filter-pill pill px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap" data-filter="vencido">Lic. Vencidas</button>
+      <button class="filter-pill pill px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap" data-filter="diff">Sobrantes / Faltantes</button>
+    </div>
+    <div id="controlEmpty" class="fc-card py-14 flex flex-col items-center gap-2 text-navy-300">
+      <i data-lucide="clipboard-list" class="w-9 h-9"></i>
+      <p class="text-xs font-medium">No hay registros para este filtro todavía.</p>
+    </div>
+    <div id="controlList" class="hidden space-y-2.5"></div>
+  </section>
+
+  <!-- ============ TAB: MATRIZ (STOCK + CONTEO COMBINADOS) (supervisor) ============ -->
+  <section id="tab-match" class="tabpanel hidden space-y-4">
+    <div>
+      <h2 class="font-display font-700 text-navy-900">Matriz · Stock + Conteo</h2>
+      <p class="text-xs text-navy-400">Todo tu stock (inv_productos_maestro) cruzado con el último conteo registrado — incluye lo pendiente por contar.</p>
+    </div>
+
+    <!-- KPIs -->
+    <div id="matrizKpis" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+
+    <!-- Filtros: Cuarentena + Sucursal -->
+    <div class="fc-card p-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+      <div class="flex gap-2">
+        <button class="matriz-filter-pill pill active px-3.5 py-2 rounded-full text-xs font-semibold" data-cuarentena="false">Todos</button>
+        <button class="matriz-filter-pill pill px-3.5 py-2 rounded-full text-xs font-semibold" data-cuarentena="true">Solo Cuarentena</button>
+      </div>
+      <select id="matrizSucursalSelect" class="bg-navy-50 border border-[#DCE7F5] rounded-full px-3.5 py-2 text-xs font-semibold text-navy-700">
+        <option value="all">Todas las sucursales</option>
+      </select>
+    </div>
+
+    <div class="fc-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs whitespace-nowrap">
+          <thead class="bg-navy-50 text-navy-400 uppercase font-mono border-b border-[#E1EBF5]">
+            <tr>
+              <th class="p-3">Código / Producto</th>
+              <th class="p-3 text-center">Sucursal</th>
+              <th class="p-3">Ubicación</th>
+              <th class="p-3 text-center">Teórico</th>
+              <th class="p-3">Responsable</th>
+              <th class="p-3 text-center">Registrado</th>
+              <th class="p-3 text-center">Diferencia</th>
+              <th class="p-3 text-center">Estado</th>
+              <th class="p-3 text-center">Cuarentena</th>
+              <th class="p-3">Lote</th>
+              <th class="p-3">Observaciones</th>
+            </tr>
+          </thead>
+          <tbody id="matchBody" class="divide-y divide-[#EEF3FA] font-mono"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: DASHBOARD (supervisor) ============ -->
+  <section id="tab-dash" class="tabpanel hidden space-y-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="fc-card p-4">
+        <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-navy-400 uppercase tracking-wide">Unidades Contadas</span><i data-lucide="package-check" class="w-4 h-4 text-brand-500"></i></div>
+        <p class="font-display font-800 text-2xl text-navy-900" id="kpiTotal">0</p>
+      </div>
+      <div class="fc-card p-4">
+        <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-navy-400 uppercase tracking-wide">Merma Real</span><i data-lucide="triangle-alert" class="w-4 h-4 text-bad-500"></i></div>
+        <p class="font-display font-800 text-2xl text-bad-500" id="kpiDamage">0</p>
+      </div>
+      <div class="fc-card p-4">
+        <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-navy-400 uppercase tracking-wide">Cruzados Recuperables</span><i data-lucide="refresh-ccw" class="w-4 h-4 text-orange-500"></i></div>
+        <p class="font-display font-800 text-2xl text-orange-500" id="kpiCrossed">0</p>
+      </div>
+      <div class="fc-card p-4">
+        <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-navy-400 uppercase tracking-wide">% Efectividad</span><i data-lucide="target" class="w-4 h-4 text-ok-500"></i></div>
+        <p class="font-display font-800 text-2xl text-ok-500" id="kpiEffectiveness">100%</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="fc-card p-4">
+        <h3 class="font-display font-700 text-sm text-navy-900 mb-3">Distribución B100 vs. A102</h3>
+        <div class="h-56"><canvas id="chartOrigin"></canvas></div>
+      </div>
+      <div class="fc-card p-4">
+        <h3 class="font-display font-700 text-sm text-navy-900 mb-3">Merma Real vs. Cruzados Recuperables</h3>
+        <div class="h-56"><canvas id="chartDamageVsCrossed"></canvas></div>
+      </div>
+      <div class="fc-card p-4">
+        <h3 class="font-display font-700 text-sm text-navy-900 mb-3">Top 5 · Mayor Daño Físico</h3>
+        <div class="h-56"><canvas id="chartTopDamage"></canvas></div>
+      </div>
+      <div class="fc-card p-4">
+        <h3 class="font-display font-700 text-sm text-navy-900 mb-3">Conteo Acumulado por Operario</h3>
+        <div class="h-56"><canvas id="chartUsers"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Bottom nav móvil (se genera según rol en script.js) -->
+<nav id="navMobile" class="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-[#E1EBF5] pb-[env(safe-area-inset-bottom)]">
+  <div id="navMobileInner" class="grid"></div>
+</nav>
+
+<!-- Toast -->
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-50 opacity-0 pointer-events-none transition-all duration-300 translate-y-2">
+  <div class="bg-navy-900 text-white text-sm font-semibold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
+    <i data-lucide="check" class="w-4 h-4 text-ok-500"></i>
+    <span id="toastMsg">Registro guardado</span>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
