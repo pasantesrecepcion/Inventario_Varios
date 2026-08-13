@@ -145,30 +145,50 @@
 
       <!-- ---------- COLUMNA IZQUIERDA: identificación del producto ---------- -->
       <div class="space-y-4">
+
+        <!-- Lector físico USB/Bluetooth: funciona como teclado, "escribe" el código + Enter -->
+        <div class="fc-card p-4 border-ok-500/30">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-display font-700 text-navy-900 flex items-center gap-2"><i data-lucide="barcode" class="w-4 h-4 text-ok-500"></i>Lector Físico (USB / Bluetooth)</h2>
+            <span id="physicalScannerBadge" class="badge px-2 py-1 rounded-md bg-ok-50 text-ok-500 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-ok-500"></span>LISTO</span>
+          </div>
+          <div class="relative">
+            <input id="physicalScannerInput" type="text" inputmode="none" placeholder="Haz clic aquí y escanea con tu lector…" autocomplete="off"
+              class="w-full bg-ok-50 border-2 border-ok-500/40 rounded-xl py-3.5 pl-10 pr-4 text-sm font-mono font-semibold text-navy-900 placeholder:text-navy-400 placeholder:font-sans focus:bg-white">
+            <i data-lucide="barcode" class="w-4 h-4 text-ok-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          </div>
+          <p class="text-[11px] text-navy-400 text-center mt-2">Recomendado: más rápido y confiable que la cámara. Mantén este campo enfocado mientras escaneas.</p>
+        </div>
+
         <div class="fc-card p-4">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="font-display font-700 text-navy-900">Escáner de Código de Barras</h2>
-            <span class="badge px-2 py-1 rounded-md bg-navy-50 text-navy-500" id="scanStatusBadge">INACTIVO</span>
+            <h2 class="font-display font-700 text-navy-900">Foto del Código de Barras</h2>
+            <span class="badge px-2 py-1 rounded-md bg-navy-50 text-navy-500" id="photoScanStatusBadge">EN ESPERA</span>
           </div>
 
-          <div id="readerWrap" class="relative w-full aspect-[4/3] sm:aspect-video rounded-xl overflow-hidden bg-navy-900 hidden">
-            <div id="reader" class="w-full h-full"></div>
-            <div class="absolute inset-0 pointer-events-none">
-              <div class="absolute inset-8 scan-frame rounded-xl"></div>
-              <div class="scan-line"></div>
-            </div>
+          <input id="barcodePhotoInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleBarcodePhoto(event)">
+          <input id="barcodeGalleryInput" type="file" accept="image/*" class="hidden" onchange="handleBarcodePhoto(event)">
+          <div id="photoReader" class="hidden"></div>
+
+          <div id="barcodePhotoPreviewWrap" class="hidden relative">
+            <img id="barcodePhotoPreview" class="w-full aspect-[4/3] sm:aspect-video object-cover rounded-xl border border-[#E1EBF5]" alt="Foto del código">
+            <button onclick="removeBarcodePhoto()" class="absolute top-2 right-2 bg-navy-900/70 hover:bg-bad-500 text-white rounded-full p-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </div>
 
-          <div id="readerPlaceholder" class="w-full aspect-[4/3] sm:aspect-video rounded-xl bg-navy-50 border border-dashed border-navy-100 flex flex-col items-center justify-center text-navy-300 gap-2">
+          <div id="barcodePhotoPlaceholder" class="w-full aspect-[4/3] sm:aspect-video rounded-xl bg-navy-50 border border-dashed border-navy-100 flex flex-col items-center justify-center text-navy-300 gap-2">
             <i data-lucide="barcode" class="w-9 h-9"></i>
-            <p class="text-xs font-medium text-navy-400">La vista de cámara aparecerá aquí</p>
+            <p class="text-xs font-medium text-navy-400 text-center px-6">Toma o sube una foto clara y enfocada del código</p>
           </div>
 
-          <button id="btnToggleScanner" class="mt-4 w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] transition text-white font-display font-700 text-sm flex items-center justify-center gap-2">
-            <i data-lucide="camera" class="w-5 h-5"></i>
-            Activar Cámara Escáner
-          </button>
-          <p class="text-[11px] text-navy-400 text-center mt-2">Solo códigos de barras: EAN-13, UPC-A, Code128, ITF.</p>
+          <div class="grid grid-cols-2 gap-3 mt-4">
+            <button onclick="document.getElementById('barcodePhotoInput').click()" class="py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] transition text-white font-display font-700 text-sm flex items-center justify-center gap-2">
+              <i data-lucide="camera" class="w-5 h-5"></i> Tomar Foto
+            </button>
+            <button onclick="document.getElementById('barcodeGalleryInput').click()" class="py-3.5 rounded-xl bg-navy-50 hover:bg-navy-100 active:scale-[0.99] transition text-navy-700 font-display font-700 text-sm flex items-center justify-center gap-2 border border-[#DCE7F5]">
+              <i data-lucide="image" class="w-5 h-5"></i> Desde Galería
+            </button>
+          </div>
+          <p class="text-[11px] text-navy-400 text-center mt-2">Que el código ocupe buena parte de la foto, sin reflejos ni movimiento. Formatos: EAN-13, UPC-A, Code128, ITF.</p>
         </div>
 
         <!-- Búsqueda predictiva manual -->

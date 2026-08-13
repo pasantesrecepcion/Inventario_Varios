@@ -6,8 +6,8 @@
 // ----------------------------------------------------------------
 // 1. CONFIGURACIÓN SUPABASE — reemplaza antes de producción
 // ----------------------------------------------------------------
-const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
-const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://cepbrsqebmpghbfvwjtb.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_TSpHDb4fmePBKrXwWn3Q1A_Q0xehq7H";
 
 // Foto de evidencia (independiente del escáner de código de barras) se sube
 // a Cloudinary como en tus otros proyectos Farmacorp. Reemplaza estos dos
@@ -52,8 +52,6 @@ const MOCK_USERS = [
 // ----------------------------------------------------------------
 let currentUser = null;        // { id, username, nombre_completo, role }
 let selectedProduct = null;
-let html5QrCode = null;
-let scannerRunning = false;
 let records = [];              // cache local de conteos_inventario (para render inmediato)
 let currentFilter = "all";
 let mockRecordCounter = 0;
@@ -146,7 +144,7 @@ async function verificarLogin(username, password) {
 function logout() {
   currentUser = null;
   selectedProduct = null;
-  stopScanner();
+  removeBarcodePhoto();
   document.getElementById("loginModal").classList.remove("hidden");
   document.getElementById("opUsername").value = "";
   document.getElementById("supUsername").value = "";
@@ -212,6 +210,7 @@ function setActiveTab(tab) {
   if (tab === "match") loadVistaSupervisor().then(renderMatchTable);
   if (tab === "mine") renderMyRecords();
   if (tab === "live") renderLiveFeed();
+  if (tab === "scan") setTimeout(enfocarLectorFisico, 50);
   lucide.createIcons();
 }
 
@@ -332,11 +331,10 @@ function selectProductById(id) {
 }
 
 // ----------------------------------------------------------------
-// 9. ESCÁNER DE CÓDIGO DE BARRAS (html5-qrcode, solo formatos de barras)
+// 9. FOTO DEL CÓDIGO DE BARRAS (Html5Qrcode.scanFile — decodifica una
+// imagen estática en vez de video en vivo: usa el enfoque automático de la
+// cámara nativa del celular, más confiable que un stream de video en la web)
 // ----------------------------------------------------------------
-const btnToggleScanner = document.getElementById("btnToggleScanner");
-btnToggleScanner.addEventListener("click", () => scannerRunning ? stopScanner() : startScanner());
-
 const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
   Html5QrcodeSupportedFormats.EAN_8,
@@ -347,44 +345,61 @@ const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.ITF,
 ];
 
-function startScanner() {
-  document.getElementById("readerPlaceholder").classList.add("hidden");
-  document.getElementById("readerWrap").classList.remove("hidden");
-  document.getElementById("scanStatusBadge").textContent = "ACTIVO";
-  document.getElementById("scanStatusBadge").className = "badge px-2 py-1 rounded-md bg-ok-50 text-ok-500";
-  btnToggleScanner.innerHTML = '<i data-lucide="camera-off" class="w-5 h-5"></i> Apagar Cámara Escáner';
-  btnToggleScanner.classList.replace("bg-brand-600", "bg-bad-500");
-  lucide.createIcons();
+let photoScannerInstance = null;
+let barcodePhotoPreviewUrl = null;
 
-  html5QrCode = new Html5Qrcode("reader", { formatsToSupport: BARCODE_FORMATS, verbose: false });
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 260, height: 140 } },
-    (decodedText) => onScanSuccess(decodedText),
-    () => { /* errores de lectura silenciosos, frame a frame */ }
-  ).then(() => { scannerRunning = true; })
-   .catch(err => {
-      console.warn("No se pudo acceder a la cámara:", err);
-      showToast("No se pudo acceder a la cámara. Verifica permisos.", true);
-      stopScanner();
-   });
-}
-
-function stopScanner() {
-  if (html5QrCode && scannerRunning) {
-    html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+function getPhotoScanner() {
+  if (!photoScannerInstance) {
+    photoScannerInstance = new Html5Qrcode("photoReader", { formatsToSupport: BARCODE_FORMATS, verbose: false });
   }
-  scannerRunning = false;
-  document.getElementById("readerWrap").classList.add("hidden");
-  document.getElementById("readerPlaceholder").classList.remove("hidden");
-  document.getElementById("scanStatusBadge").textContent = "INACTIVO";
-  document.getElementById("scanStatusBadge").className = "badge px-2 py-1 rounded-md bg-navy-50 text-navy-500";
-  btnToggleScanner.innerHTML = '<i data-lucide="camera" class="w-5 h-5"></i> Activar Cámara Escáner';
-  btnToggleScanner.classList.replace("bg-bad-500", "bg-brand-600");
-  lucide.createIcons();
+  return photoScannerInstance;
 }
 
-async function onScanSuccess(decodedText) {
+async function handleBarcodePhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (barcodePhotoPreviewUrl) URL.revokeObjectURL(barcodePhotoPreviewUrl);
+  barcodePhotoPreviewUrl = URL.createObjectURL(file);
+  document.getElementById("barcodePhotoPreview").src = barcodePhotoPreviewUrl;
+  document.getElementById("barcodePhotoPlaceholder").classList.add("hidden");
+  document.getElementById("barcodePhotoPreviewWrap").classList.remove("hidden");
+
+  const badge = document.getElementById("photoScanStatusBadge");
+  badge.textContent = "LEYENDO…";
+  badge.className = "badge px-2 py-1 rounded-md bg-orange-50 text-orange-700";
+
+  try {
+    const decodedText = await getPhotoScanner().scanFile(file, false);
+    badge.textContent = "DETECTADO";
+    badge.className = "badge px-2 py-1 rounded-md bg-ok-50 text-ok-500";
+    await procesarCodigoDetectado(decodedText);
+  } catch (err) {
+    console.warn("No se pudo leer un código en la foto:", err);
+    badge.textContent = "SIN DETECTAR";
+    badge.className = "badge px-2 py-1 rounded-md bg-bad-50 text-bad-500";
+    showToast("No se detectó ningún código en la foto. Prueba con más luz, más de cerca y sin reflejos.", true);
+  } finally {
+    event.target.value = ""; // permite volver a elegir el mismo archivo si hace falta
+  }
+}
+
+function removeBarcodePhoto() {
+  if (barcodePhotoPreviewUrl) URL.revokeObjectURL(barcodePhotoPreviewUrl);
+  barcodePhotoPreviewUrl = null;
+  document.getElementById("barcodePhotoInput").value = "";
+  document.getElementById("barcodeGalleryInput").value = "";
+  document.getElementById("barcodePhotoPreviewWrap").classList.add("hidden");
+  document.getElementById("barcodePhotoPlaceholder").classList.remove("hidden");
+  const badge = document.getElementById("photoScanStatusBadge");
+  badge.textContent = "EN ESPERA";
+  badge.className = "badge px-2 py-1 rounded-md bg-navy-50 text-navy-500";
+}
+
+// Lógica compartida: procesa cualquier código leído, venga de la foto, del
+// lector físico USB/Bluetooth, o de la búsqueda manual. Busca match; si no
+// hay, ofrece crear el producto al vuelo.
+async function procesarCodigoDetectado(decodedText) {
   const p = await buscarProductoPorBarcode(decodedText);
   if (p) {
     selectProduct(p);
@@ -393,7 +408,31 @@ async function onScanSuccess(decodedText) {
     showToast(`Código leído (${decodedText.slice(0, 13)}…) sin match en el maestro`, true);
     abrirCreacionRapida(decodedText);
   }
-  stopScanner();
+}
+
+// ----------------------------------------------------------------
+// 9c. LECTOR FÍSICO (USB / Bluetooth) — actúa como teclado: "escribe" el
+// código y presiona Enter solo. No necesita cámara ni permisos.
+// ----------------------------------------------------------------
+const physicalScannerInput = document.getElementById("physicalScannerInput");
+
+physicalScannerInput.addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const codigo = physicalScannerInput.value.trim();
+  physicalScannerInput.value = "";
+  if (!codigo) return;
+  await procesarCodigoDetectado(codigo);
+  physicalScannerInput.focus();
+});
+
+function enfocarLectorFisico() {
+  // Solo tiene sentido en desktop/tablet con lector conectado; en el
+  // celular no molesta, simplemente no hay teclado físico que lo dispare.
+  const loginVisible = !document.getElementById("loginModal").classList.contains("hidden");
+  if (physicalScannerInput && !loginVisible) {
+    physicalScannerInput.focus({ preventScroll: true });
+  }
 }
 
 // ----------------------------------------------------------------
@@ -538,6 +577,7 @@ function clearSelection() {
   document.getElementById("noProductNotice").classList.remove("hidden");
   document.getElementById("formBody").classList.add("hidden");
   resetForm();
+  setTimeout(enfocarLectorFisico, 50);
 }
 
 function resetForm() {
