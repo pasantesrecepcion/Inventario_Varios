@@ -886,11 +886,9 @@ function refreshCurrentTab() {
 // ----------------------------------------------------------------
 function showToast(msg, isError) {
   const t = document.getElementById("toast");
-  const iconWrap = t.querySelector("div");
   document.getElementById("toastMsg").textContent = msg;
-  iconWrap.querySelector("i").setAttribute("data-lucide", isError ? "alert-triangle" : "check");
-  iconWrap.querySelector("i").className = "w-4 h-4 " + (isError ? "text-orange-500" : "text-ok-500");
-  lucide.createIcons();
+  document.getElementById("toastIconOk").classList.toggle("hidden", !!isError);
+  document.getElementById("toastIconError").classList.toggle("hidden", !isError);
   t.classList.remove("opacity-0", "translate-y-2"); t.classList.add("opacity-100", "translate-y-0");
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => {

@@ -516,7 +516,8 @@
 <!-- Toast -->
 <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-50 opacity-0 pointer-events-none transition-all duration-300 translate-y-2">
   <div class="bg-navy-900 text-white text-sm font-semibold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
-    <i data-lucide="check" class="w-4 h-4 text-ok-500"></i>
+    <i data-lucide="check" id="toastIconOk" class="w-4 h-4 text-ok-500"></i>
+    <i data-lucide="alert-triangle" id="toastIconError" class="w-4 h-4 text-orange-500 hidden"></i>
     <span id="toastMsg">Registro guardado</span>
   </div>
 </div>
